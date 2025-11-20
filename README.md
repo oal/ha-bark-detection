@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/logo.png" alt="Bark Detector Logo" width="200"/>
+</div>
+
 # Dog Bark Detection System for Home Assistant
 
 A lightweight, real-time bark detection system that monitors audio from a USB microphone and reports barking events to Home Assistant via MQTT. Uses simple decibel threshold analysis for fast, reliable detection without requiring machine learning models.
@@ -133,14 +137,6 @@ sudo apt-get install mosquitto-clients
 mosquitto_sub -h <your-broker-ip> -t "homeassistant/#" -v
 ```
 
-## Documentation
-
-See [README.md](README.md) for full documentation including:
-- Configuration reference
-- Troubleshooting guide
-- Home Assistant integration
-- Example automations
-
 ## License
 
-[Add your license here]
+This project is licensed under the Mozilla Public License 2.0 - see the [LICENSE](LICENSE) file for details.

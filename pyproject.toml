@@ -3,6 +3,7 @@ name = "bark-detector"
 version = "1.0.0"
 description = "Dog bark detection system with MQTT integration for Home Assistant"
 readme = "README.md"
+license = { text = "MPL-2.0" }
 authors = [
     { name = "Olav", email = "olav@lindekleiv.com" }
 ]
