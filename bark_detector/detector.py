@@ -34,7 +34,7 @@ class BarkEvent:
         """Convert to dictionary for JSON serialization."""
         return {
             "timestamp": self.timestamp,
-            "peak_db": round(self.peak_db, 1),
+            "peak_db": float(round(self.peak_db, 1)),
             "device": self.device
         }
 
