@@ -68,6 +68,27 @@ if ! command -v uv &> /dev/null; then
     exit 1
 fi
 
+# Check for PortAudio system dependency
+print_info "Checking for PortAudio system library..."
+cd "$PROJECT_DIR"
+
+# Try to import sounddevice to check if PortAudio is available
+if ! uv run python -c "import sounddevice" 2>/dev/null; then
+    print_error "PortAudio library not found!"
+    echo
+    print_warning "The sounddevice Python package requires PortAudio at the system level."
+    print_warning "Please install it for your distribution:"
+    echo
+    echo "  Ubuntu/Debian:  sudo apt-get install portaudio19-dev python3-dev"
+    echo "  Fedora/RHEL:    sudo dnf install portaudio-devel python3-devel"
+    echo "  Arch Linux:     sudo pacman -S portaudio"
+    echo
+    print_warning "After installing, run this script again."
+    exit 1
+fi
+print_info "✓ PortAudio is available"
+echo
+
 # Reload systemd daemon
 print_info "Reloading systemd user daemon..."
 systemctl --user daemon-reload
