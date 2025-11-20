@@ -1,0 +1,29 @@
+[Unit]
+Description=Dog Bark Detection Service
+Documentation=https://github.com/yourusername/ha-bark-detection
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+WorkingDirectory=%h/Projects/ha-bark-detection
+ExecStart=/usr/bin/uv run python -m bark_detector.main
+
+# Environment
+Environment="PYTHONUNBUFFERED=1"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bark-detector
+
+# Resource limits (optional)
+# Limit memory usage to prevent runaway process
+MemoryMax=256M
+# Nice level (optional, lower priority)
+Nice=10
+
+[Install]
+WantedBy=default.target

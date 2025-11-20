@@ -1,0 +1,19 @@
+[project]
+name = "bark-detector"
+version = "1.0.0"
+description = "Dog bark detection system with MQTT integration for Home Assistant"
+readme = "README.md"
+authors = [
+    { name = "Olav", email = "olav@lindekleiv.com" }
+]
+requires-python = ">=3.8"
+dependencies = [
+    "sounddevice>=0.4.6",
+    "numpy>=1.24.0",
+    "paho-mqtt>=1.6.1",
+    "python-dotenv>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
