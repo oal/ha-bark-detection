@@ -5,6 +5,7 @@ Integrates audio capture, bark detection, and MQTT publishing
 into a complete monitoring service with graceful shutdown support.
 """
 
+import argparse
 import logging
 import signal
 import sys
@@ -45,9 +46,36 @@ def setup_logging(log_level: int):
     )
 
 
+def parse_arguments():
+    """
+    Parse command-line arguments.
+
+    Returns:
+        argparse.Namespace: Parsed arguments
+    """
+    parser = argparse.ArgumentParser(
+        description="Bark Detection Service - Monitor and detect dog barks via USB microphone",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode with detailed real-time audio level logging and statistics"
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}"
+    )
+    return parser.parse_args()
+
+
 def main():
     """Main application entry point."""
     global shutdown_requested
+
+    # Parse command-line arguments
+    args = parse_arguments()
 
     # Load configuration first (before logging setup)
     try:
@@ -65,6 +93,8 @@ def main():
     # Display startup banner
     logger.info("=" * 60)
     logger.info(f"Bark Detection Service v{__version__}")
+    if args.debug:
+        logger.info("🐛 DEBUG MODE ENABLED - Detailed logging active")
     logger.info("=" * 60)
 
     # Log configuration
@@ -98,7 +128,8 @@ def main():
             min_duration_ms=config.min_bark_duration_ms,
             cooldown_ms=config.cooldown_period_ms,
             sample_rate=config.sample_rate,
-            chunk_size=1024
+            chunk_size=1024,
+            debug_mode=args.debug
         )
 
         # Initialize MQTT publisher

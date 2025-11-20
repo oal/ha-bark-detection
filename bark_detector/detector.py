@@ -55,7 +55,8 @@ class BarkDetector:
         min_duration_ms: int = 100,
         cooldown_ms: int = 500,
         sample_rate: int = 44100,
-        chunk_size: int = 1024
+        chunk_size: int = 1024,
+        debug_mode: bool = False
     ):
         """
         Initialize bark detector.
@@ -66,12 +67,14 @@ class BarkDetector:
             cooldown_ms: Cooldown period between detections
             sample_rate: Audio sample rate in Hz
             chunk_size: Number of samples per chunk
+            debug_mode: Enable detailed debug logging and statistics
         """
         self.threshold_db = threshold_db
         self.min_duration_ms = min_duration_ms
         self.cooldown_ms = cooldown_ms
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size
+        self.debug_mode = debug_mode
 
         # Calculate derived parameters
         self.chunk_duration_ms = (chunk_size / sample_rate) * 1000
@@ -82,12 +85,28 @@ class BarkDetector:
         self.above_threshold_count = 0
         self.current_peak_db: Optional[float] = None
 
+        # Debug statistics tracking
+        self.stats_min_db: Optional[float] = None
+        self.stats_max_db: Optional[float] = None
+        self.stats_sum_db: float = 0.0
+        self.stats_count: int = 0
+        self.last_stats_time: float = time.time()
+        self.stats_interval_sec: float = 10.0  # Report stats every 10 seconds
+
         logger.info(f"Bark detector initialized:")
-        logger.info(f"  Threshold: {threshold_db} dB")
+        logger.info(f"  Threshold: {threshold_db} dBFS")
         logger.info(f"  Min duration: {min_duration_ms} ms "
                    f"({self.min_duration_chunks} chunks)")
         logger.info(f"  Cooldown: {cooldown_ms} ms")
         logger.info(f"  Chunk duration: {self.chunk_duration_ms:.1f} ms")
+        if debug_mode:
+            logger.info(f"  Debug mode: ENABLED (stats every {self.stats_interval_sec:.0f}s)")
+
+        # Add helpful note about dBFS scale
+        if threshold_db >= 0:
+            logger.warning(f"⚠️  Threshold is {threshold_db} dBFS (positive value)")
+            logger.warning(f"    Digital audio uses dBFS: 0 = maximum, negative = quieter")
+            logger.warning(f"    Typical barks are -10 to -40 dBFS. Use negative values!")
 
     def _calculate_db(self, audio_chunk: np.ndarray) -> float:
         """
@@ -121,6 +140,43 @@ class BarkDetector:
         elapsed_ms = (time.time() - self.last_detection_time) * 1000
         return elapsed_ms < self.cooldown_ms
 
+    def _update_statistics(self, db: float):
+        """
+        Update debug statistics and report periodically.
+
+        Args:
+            db: Current decibel level
+        """
+        if not self.debug_mode:
+            return
+
+        # Update statistics
+        if self.stats_min_db is None or db < self.stats_min_db:
+            self.stats_min_db = db
+        if self.stats_max_db is None or db > self.stats_max_db:
+            self.stats_max_db = db
+        self.stats_sum_db += db
+        self.stats_count += 1
+
+        # Check if it's time to report statistics
+        current_time = time.time()
+        elapsed_sec = current_time - self.last_stats_time
+
+        if elapsed_sec >= self.stats_interval_sec:
+            avg_db = self.stats_sum_db / self.stats_count if self.stats_count > 0 else 0
+            logger.info(f"📊 Stats (last {elapsed_sec:.1f}s): "
+                       f"Min={self.stats_min_db:.1f}dBFS, "
+                       f"Max={self.stats_max_db:.1f}dBFS, "
+                       f"Avg={avg_db:.1f}dBFS, "
+                       f"Samples={self.stats_count}")
+
+            # Reset statistics for next interval
+            self.stats_min_db = None
+            self.stats_max_db = None
+            self.stats_sum_db = 0.0
+            self.stats_count = 0
+            self.last_stats_time = current_time
+
     def process_chunk(self, audio_chunk: np.ndarray) -> Optional[BarkEvent]:
         """
         Process audio chunk and detect bark events.
@@ -133,6 +189,29 @@ class BarkDetector:
         """
         # Calculate decibel level
         db = self._calculate_db(audio_chunk)
+
+        # Update statistics if in debug mode
+        self._update_statistics(db)
+
+        # Debug mode: real-time dB output with visual indicator
+        if self.debug_mode:
+            # Calculate how close to threshold (for visual indicator)
+            diff_from_threshold = db - self.threshold_db
+
+            # Create visual indicator
+            if db > self.threshold_db:
+                indicator = "🔴"  # Above threshold
+                status = f"+{diff_from_threshold:.1f}dB"
+            elif diff_from_threshold > -10:
+                indicator = "🟡"  # Close to threshold (within 10 dB)
+                status = f"{diff_from_threshold:.1f}dB"
+            else:
+                indicator = "🟢"  # Well below threshold
+                status = f"{diff_from_threshold:.1f}dB"
+
+            logger.info(f"{indicator} {db:.1f}dBFS [{status}] | "
+                       f"Threshold: {self.threshold_db}dBFS | "
+                       f"Count: {self.above_threshold_count}")
 
         logger.debug(f"Chunk dB: {db:.1f}, Threshold: {self.threshold_db}, "
                     f"Above count: {self.above_threshold_count}")
@@ -156,7 +235,7 @@ class BarkDetector:
                     peak_db=self.current_peak_db
                 )
 
-                logger.info(f"🐕 Bark detected! Peak: {self.current_peak_db:.1f} dB, "
+                logger.info(f"🐕 Bark detected! Peak: {self.current_peak_db:.1f} dBFS, "
                           f"Duration: {self.above_threshold_count} chunks "
                           f"({self.above_threshold_count * self.chunk_duration_ms:.0f} ms)")
 
@@ -170,6 +249,15 @@ class BarkDetector:
         else:
             # Below threshold - reset counter
             if self.above_threshold_count > 0:
+                # Log failed detection attempts in debug mode
+                if self.debug_mode:
+                    duration_ms = self.above_threshold_count * self.chunk_duration_ms
+                    required_ms = self.min_duration_chunks * self.chunk_duration_ms
+                    logger.info(f"⚠️  Detection attempt failed: "
+                              f"Peak={self.current_peak_db:.1f}dBFS, "
+                              f"Duration={duration_ms:.0f}ms "
+                              f"(required: {required_ms:.0f}ms, "
+                              f"short by {required_ms - duration_ms:.0f}ms)")
                 logger.debug(f"Sound dropped below threshold after "
                            f"{self.above_threshold_count} chunks")
             self.above_threshold_count = 0

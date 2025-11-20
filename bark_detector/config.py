@@ -52,10 +52,10 @@ class Config:
         """Load and validate bark detection parameters."""
         self.bark_threshold_db = self._get_float_env(
             "BARK_THRESHOLD_DB",
-            default=60.0,
-            min_val=30.0,
-            max_val=100.0,
-            description="bark threshold (dB)"
+            default=-30.0,
+            min_val=-60.0,
+            max_val=0.0,
+            description="bark threshold (dBFS)"
         )
 
         self.min_bark_duration_ms = self._get_int_env(
@@ -196,7 +196,7 @@ class Config:
         logger.info("Configuration loaded:")
         logger.info(f"  Microphone Device ID: {self.microphone_device_id}")
         logger.info(f"  Sample Rate: {self.sample_rate} Hz")
-        logger.info(f"  Bark Threshold: {self.bark_threshold_db} dB")
+        logger.info(f"  Bark Threshold: {self.bark_threshold_db} dBFS")
         logger.info(f"  Min Bark Duration: {self.min_bark_duration_ms} ms")
         logger.info(f"  Cooldown Period: {self.cooldown_period_ms} ms")
         logger.info(f"  MQTT Broker: {self.mqtt_broker}:{self.mqtt_port}")
