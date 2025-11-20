@@ -1,6 +1,6 @@
 [Unit]
 Description=Dog Bark Detection Service
-Documentation=https://github.com/yourusername/ha-bark-detection
+Documentation=https://github.com/oal/ha-bark-detection
 After=network-online.target sound.target
 Wants=network-online.target
 
