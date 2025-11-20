@@ -114,7 +114,7 @@ class MQTTPublisher:
         discovery_payload = {
             "name": "Dog Bark Detector",
             "state_topic": self.topic,
-            "unit_of_measurement": "events",
+            "device_class": "timestamp",
             "value_template": "{{ value_json.timestamp }}",
             "json_attributes_topic": self.topic,
             "icon": "mdi:dog",
